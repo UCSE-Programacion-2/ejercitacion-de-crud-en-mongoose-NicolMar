@@ -7,9 +7,9 @@ app.use(express.json());
 const PORT = process.env.PORT || 3000;
 
 /**
- * Nota: A diferencia del driver nativo de MongoDB, Mongoose no requiere que inyectes 
- * la base de datos o la colección en cada request (middleware `req.db`). 
- * Simplemente puedes utilizar el modelo `Equipo` que importaste de `./src/mongoose` 
+ * Nota: A diferencia del driver nativo de MongoDB, Mongoose no requiere que inyectes
+ * la base de datos o la colección en cada request (middleware `req.db`).
+ * Simplemente puedes utilizar el modelo `Equipo` que importaste de `./src/mongoose`
  * en cualquier parte del código (Ej: Equipo.find(), Equipo.findById(), etc).
  */
 
@@ -19,7 +19,13 @@ const PORT = process.env.PORT || 3000;
  * 2. Debe retornar el arreglo con status 200.
  */
 app.get('/equipos', async (req, res) => {
-    // Tu código aquí
+  try {
+    const equipos = await Equipo.find();
+
+    return res.status(200).json(equipos);
+  } catch (error) {
+    return res.status(500).json({ error: 'Error al obtener los equipos' });
+  }
 });
 
 /**
@@ -32,7 +38,24 @@ app.get('/equipos', async (req, res) => {
  * IMPORTANTE: ¡Esta ruta debe ir ANTES que la ruta GET /equipos/:id!
  */
 app.get('/equipos/buscar', async (req, res) => {
-    // Tu código aquí
+  try {
+    const { tecnico } = req.query;
+
+    const filtro = tecnico
+      ? {
+          tecnico: {
+            $regex: tecnico,
+            $options: 'i',
+          },
+        }
+      : {};
+
+    const equipos = await Equipo.find(filtro);
+
+    return res.status(200).json(equipos);
+  } catch (error) {
+    return res.status(500).json({ error: 'Error al buscar equipos' });
+  }
 });
 
 /**
@@ -45,19 +68,48 @@ app.get('/equipos/buscar', async (req, res) => {
  * 5. Si no lo encuentra, retornar un status 404 y { error: "Equipo no encontrado" }.
  */
 app.get('/equipos/:id', async (req, res) => {
-    // Tu código aquí
+  try {
+    const { id } = req.params;
+
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+      return res.status(400).json({ error: 'ID inválido' });
+    }
+
+    const equipo = await Equipo.findById(id);
+
+    if (!equipo) {
+      return res.status(404).json({ error: 'Equipo no encontrado' });
+    }
+
+    return res.status(200).json(equipo);
+  } catch (error) {
+    return res.status(500).json({ error: 'Error al obtener el equipo' });
+  }
 });
 
 /**
  * TODO: Implementar un endpoint POST /equipos
  * 1. Debe extraer equipo, tecnico, continente y campeonatos_mundiales del req.body.
  * 2. Intenta instanciar un nuevo Equipo() y utilizar el método save() del documento, o utiliza Equipo.create().
- * 3. Si hay errores de validación de Mongoose (falta algún campo o tipo incorrecto), debes atraparlos 
+ * 3. Si hay errores de validación de Mongoose (falta algún campo o tipo incorrecto), debes atraparlos
  *    y retornar status 400 con un JSON: { error: error.message }.
  * 4. Si se guarda exitosamente, debe retornar el nuevo equipo y status 201.
  */
 app.post('/equipos', async (req, res) => {
-    // Tu código aquí
+  try {
+    const { equipo, tecnico, continente, campeonatos_mundiales } = req.body;
+
+    const nuevoEquipo = await Equipo.create({
+      equipo,
+      tecnico,
+      continente,
+      campeonatos_mundiales,
+    });
+
+    return res.status(201).json(nuevoEquipo);
+  } catch (error) {
+    return res.status(400).json({ error: error.message });
+  }
 });
 
 /**
@@ -70,7 +122,46 @@ app.post('/equipos', async (req, res) => {
  * 5. Si hay errores de validación (por ejemplo, tipos incorrectos), retorna 400.
  */
 app.put('/equipos/:id', async (req, res) => {
-    // Tu código aquí
+  try {
+    const { id } = req.params;
+
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+      return res.status(400).json({ error: 'ID inválido' });
+    }
+
+    const { equipo, tecnico, continente, campeonatos_mundiales } = req.body;
+
+    if (
+      typeof equipo !== 'string' ||
+      typeof tecnico !== 'string' ||
+      typeof continente !== 'string' ||
+      typeof campeonatos_mundiales !== 'number'
+    ) {
+      return res.status(400).json({ error: 'Datos inválidos' });
+    }
+
+    const equipoActualizado = await Equipo.findByIdAndUpdate(
+      id,
+      {
+        equipo,
+        tecnico,
+        continente,
+        campeonatos_mundiales,
+      },
+      {
+        new: true,
+        runValidators: true,
+      },
+    );
+
+    if (!equipoActualizado) {
+      return res.status(404).json({ error: 'Equipo no encontrado' });
+    }
+
+    return res.status(200).json(equipoActualizado);
+  } catch (error) {
+    return res.status(400).json({ error: error.message });
+  }
 });
 
 /**
@@ -81,16 +172,32 @@ app.put('/equipos/:id', async (req, res) => {
  * 4. Si se eliminó correctamente, retorna status 200.
  */
 app.delete('/equipos/:id', async (req, res) => {
-    // Tu código aquí
+  try {
+    const { id } = req.params;
+
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+      return res.status(400).json({ error: 'ID inválido' });
+    }
+
+    const equipoEliminado = await Equipo.findByIdAndDelete(id);
+
+    if (!equipoEliminado) {
+      return res.status(404).json({ error: 'Equipo no encontrado' });
+    }
+
+    return res.status(200).json(equipoEliminado);
+  } catch (error) {
+    return res.status(500).json({ error: 'Error al eliminar el equipo' });
+  }
 });
 
 // Iniciar el servidor solo si este archivo se ejecuta directamente
 if (require.main === module) {
-    connectDB().then(() => {
-        app.listen(PORT, () => {
-            console.log(`Servidor escuchando en http://localhost:${PORT}`);
-        });
+  connectDB().then(() => {
+    app.listen(PORT, () => {
+      console.log(`Servidor escuchando en http://localhost:${PORT}`);
     });
+  });
 }
 
 // Exportamos 'app', 'closeDB' y 'connectDB' para poder hacer testing
