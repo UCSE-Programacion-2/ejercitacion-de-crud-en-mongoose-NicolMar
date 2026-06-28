@@ -12,12 +12,12 @@ const MONGO_URI = process.env.MONGO_URI || 'mongodb://localhost:27017/MundialDB'
  * Opcional: Imprime por consola que te has conectado correctamente.
  */
 async function connectDB() {
-    try {
-        // Tu código aquí
-        
-    } catch (error) {
-        console.error("Error al conectar a MongoDB:", error);
-    }
+  try {
+    await mongoose.connect(MONGO_URI);
+    console.log('Conectado correctamente a MongoDB con Mongoose');
+  } catch (error) {
+    console.error('Error al conectar a MongoDB:', error);
+  }
 }
 
 /**
@@ -31,14 +31,29 @@ async function connectDB() {
  * 3. Asígnalo a la constante Equipo para exportarlo.
  */
 const equipoSchema = new mongoose.Schema({
-    // Tu código aquí
+  equipo: {
+    type: String,
+    required: true,
+  },
+  tecnico: {
+    type: String,
+    required: true,
+  },
+  continente: {
+    type: String,
+    required: true,
+  },
+  campeonatos_mundiales: {
+    type: Number,
+    required: true,
+  },
 });
 
-const Equipo = null; // Reemplazar null por mongoose.model(...)
+const Equipo = mongoose.model('Equipo', equipoSchema);
 
 // Función para cerrar la conexión (útil para tests)
 async function closeDB() {
-    await mongoose.disconnect();
+  await mongoose.disconnect();
 }
 
 module.exports = { mongoose, connectDB, closeDB, Equipo };
